@@ -98,7 +98,7 @@ class MultipleCircle constructor(
             }
 
         } else if (action == MotionEvent.ACTION_MOVE) {
-            if (isEnd) return false
+//            if (isEnd) return false
             val count = event.pointerCount
             for (index in 0 until count) {
                 var finger = fingers[event.getPointerId(index)]
@@ -115,12 +115,8 @@ class MultipleCircle constructor(
             }
         } else if (action == MotionEvent.ACTION_CANCEL) {
             startTime = 0
-            if (isEnd) {
-                Handler().postDelayed({
-                    fingers.clear()
-                }, 1000)
-                isEnd = false
-            }
+            fingers.clear()
+            isEnd = false
         }
 
         // do something with fingers and invalidate();
