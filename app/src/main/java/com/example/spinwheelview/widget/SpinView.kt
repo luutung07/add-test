@@ -1,9 +1,11 @@
 package com.example.spinwheelview.widget
 
+import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
@@ -13,13 +15,10 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.Animation
-import android.view.animation.LinearInterpolator
-import android.view.animation.ScaleAnimation
-import java.util.Random
+import com.example.spinwheelview.R
 import java.util.concurrent.ThreadLocalRandom
+
 
 class SpinView constructor(
     private val ctx: Context,
@@ -30,8 +29,6 @@ class SpinView constructor(
         private const val TAG = "SpinView"
         private const val RADIUS_OFF_SET = 120f
     }
-
-    private val fingers: HashMap<Int, Pair< Pair<PointF, Int> , RippleView > > = HashMap()
 
     private val paintText = Paint().apply {
         color = Color.BLACK
@@ -49,25 +46,22 @@ class SpinView constructor(
 
     private var type: SPIN_TYPE = SPIN_TYPE.COUPLE
 
-//    private var animation: Animation? = null
-
-    private var randomColor: Random = Random()
-
     // choose
-    private var sizeWinner = 3
+    private var sizeWinner = 2
     private var setRandom = hashSetOf<Int>()
 
     // rank
     private var mapRank = hashMapOf<PointF, Int>()
 
     // couple
-    private var sizeCouple = 3
+    private var sizeCouple = 2
     private var mapCouple = hashMapOf<Int, List<PointF>>()
 
     private var startTime = 0L
     private var isEnd = false
 
-    private var mapAnimation: HashMap<Pair<Float, Float>, Animation?> = hashMapOf()
+    private var mapViewAnimation: HashMap<Int, Pair<PointF, Pair<AnimatorSet?, List<RippleView>>>> =
+        hashMapOf()
 
     init {
 
@@ -75,86 +69,104 @@ class SpinView constructor(
 
     override fun dispatchDraw(canvas: Canvas) {
         super.dispatchDraw(canvas)
-        fingers.forEach { (t, u) ->
-            rippleParams = LayoutParams(
-                40,
-                40
-            )
-            rippleParams!!.setMargins(u.first.first.x.toInt(), u.first.first.y.toInt(), 0, 0)
-            animatorSet = AnimatorSet()
-            animatorSet!!.interpolator = AccelerateDecelerateInterpolator()
-            animatorList = ArrayList()
-            removeView(u.second)
-            for (i in 0 until rippleAmount) {
-                Log.d(TAG, "dispatchDraw: ${u.second}")
-                val rippleView = u.second
-                addView(rippleView, rippleParams)
-                rippleViewList.add(rippleView)
-                val scaleXAnimator = ObjectAnimator.ofFloat(rippleView, "ScaleX", 1.0f, rippleScale)
-                scaleXAnimator.repeatCount = ObjectAnimator.INFINITE
-                scaleXAnimator.repeatMode = ObjectAnimator.RESTART
-                scaleXAnimator.startDelay = (i * rippleDelay).toLong()
-                scaleXAnimator.setDuration(rippleDurationTime.toLong())
-                animatorList!!.add(scaleXAnimator)
-                val scaleYAnimator = ObjectAnimator.ofFloat(rippleView, "ScaleY", 1.0f, rippleScale)
-                scaleYAnimator.repeatCount = ObjectAnimator.INFINITE
-                scaleYAnimator.repeatMode = ObjectAnimator.RESTART
-                scaleYAnimator.startDelay = (i * rippleDelay).toLong()
-                scaleYAnimator.setDuration(rippleDurationTime.toLong())
-                animatorList!!.add(scaleYAnimator)
-                val alphaAnimator = ObjectAnimator.ofFloat(rippleView, "Alpha", 1.0f, 0f)
-                alphaAnimator.repeatCount = ObjectAnimator.INFINITE
-                alphaAnimator.repeatMode = ObjectAnimator.RESTART
-                alphaAnimator.startDelay = (i * rippleDelay).toLong()
-                alphaAnimator.setDuration(rippleDurationTime.toLong())
-                animatorList!!.add(alphaAnimator)
-            }
+        mapViewAnimation.forEach { (k, v) ->
+            if (isEnd) {
+                when {
+                    type == SPIN_TYPE.CHOOSE -> {
+                        if (setRandom.contains(k)) {
+                            canvas.drawText("Winner", v.first.x, v.first.y, paintText)
+                        } else {
+                            val data = v.second
+                            data.first?.end()
+                            data.second.forEach {
+                                removeView(it)
+                            }
+                        }
+                    }
 
-            animatorSet!!.playTogether(animatorList)
-            for (rippleView in rippleViewList) {
-                rippleView.visibility = VISIBLE
+                    type == SPIN_TYPE.RANK -> {
+                        if (mapRank.contains(v.first)) {
+                            val rankNumber = (mapRank[v.first] ?: 0) + 1
+
+                            when (rankNumber) {
+                                1 -> {
+                                    val bitmap = BitmapFactory.decodeResource(
+                                        resources,
+                                        R.drawable.ic_rank_top1
+                                    )
+                                    canvas.drawBitmap(
+                                        bitmap,
+                                        v.first.x - (bitmap.width / 2),
+                                        v.first.y - ((DEFAULT_RIPPLE_COUNT - 3) * bitmap.height),
+                                        null
+                                    );
+                                }
+
+                                2 -> {
+                                    val bitmap = BitmapFactory.decodeResource(
+                                        resources,
+                                        R.drawable.ic_rank_top2
+                                    )
+                                    canvas.drawBitmap(
+                                        bitmap,
+                                        v.first.x - (bitmap.width / 2),
+                                        v.first.y - ((DEFAULT_RIPPLE_COUNT - 2) * bitmap.height),
+                                        null
+                                    );
+                                }
+
+                                3 -> {
+                                    val bitmap = BitmapFactory.decodeResource(
+                                        resources,
+                                        R.drawable.ic_rank_top3
+                                    )
+                                    canvas.drawBitmap(
+                                        bitmap,
+                                        v.first.x - (bitmap.width / 2),
+                                        v.first.y - ((DEFAULT_RIPPLE_COUNT - 2) * bitmap.height),
+                                        null
+                                    );
+                                }
+                            }
+
+                            canvas.drawText(
+                                "Rank $rankNumber",
+                                v.first.x,
+                                v.first.y,
+                                paintText
+                            )
+                        }
+                    }
+                }
             }
-            animatorSet!!.start()
-//            if (isEnd) {
-//                when {
-//                    type == SPIN_TYPE.CHOOSE -> {
-//                        if (setRandom.contains(t)) {
-//                            canvas.drawText("Winner", u.first.x, u.first.y, paintText)
-//                        }
-//                    }
-//
-//                    type == SPIN_TYPE.RANK -> {
-//                        if (mapRank.contains(u.first)) {
-//                            canvas.drawText(
-//                                "Rank ${(mapRank[u.first] ?: 0) + 1}",
-//                                u.first.x,
-//                                u.first.y,
-//                                paintText
-//                            )
-//                        }
-//                    }
-//                }
-//            }
         }
-//        if (isEnd && type == SPIN_TYPE.COUPLE) {
-//            mapCouple.forEach { t, u ->
-//                val path = Path()
-//                path.moveTo(u[0].x, u[0].y)
-//
-//                for (i in 1 until u.size) {
-//                    path.lineTo(u[i].x, u[i].y)
-//                }
-//
-//                path.close()
-//                canvas.drawPath(path, paintLine)
-//            }
-//        }
-    }
 
-    fun View?.removeSelf() {
-        this ?: return
-        val parentView = parent as? ViewGroup ?: return
-        parentView.removeView(this)
+        if (isEnd && type == SPIN_TYPE.COUPLE) {
+            mapCouple.forEach { (t, u) ->
+                val sameColor = mapColor[t] ?: Color.RED
+
+                mapViewAnimation.forEach { (k, v) ->
+                    v.second.second.map { view ->
+                        if (u.contains(v.first)) {
+                            view.setColor(sameColor)
+                        } else {
+                            view.setColor(mapColor[k] ?: Color.BLACK)
+                        }
+                        view
+                    }
+                }
+
+                val path = Path()
+                path.moveTo(u[0].x, u[0].y)
+
+                for (i in 1 until u.size) {
+                    path.lineTo(u[i].x, u[i].y)
+                }
+
+                path.close()
+                canvas.drawPath(path, paintLine.apply { color = sameColor })
+            }
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -162,19 +174,28 @@ class SpinView constructor(
         val action = event?.actionMasked
         when (action) {
             MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -> {
+                Log.d(TAG, "onTouchEvent: ACTION_DOWN")
                 setActionDown(event)
             }
 
             MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP -> {
                 setActionUp(event)
+                Log.d(TAG, "onTouchEvent: ACTION_UP")
             }
 
             MotionEvent.ACTION_MOVE -> {
-                if (isEnd) return false
-                setActionMove(event)
+                Log.d(TAG, "onTouchEvent: ACTION_MOVE")
+                if (isEnd) {
+                    postDelayed({
+                        resetData()
+                    }, 1000)
+                } else {
+                    setActionMove(event)
+                }
             }
 
             MotionEvent.ACTION_CANCEL -> {
+                Log.d(TAG, "onTouchEvent: ACTION_CANCEL")
                 resetData()
             }
         }
@@ -185,39 +206,91 @@ class SpinView constructor(
     private fun resetData() {
         isEnd = false
         startTime = 0
-        fingers.clear()
         mapRank.clear()
         setRandom.clear()
         mapCouple.clear()
-        mapAnimation.clear()
-        removeAllViews()
+        mapColor.clear()
+        mapViewAnimation.forEach { (t, u) ->
+            u.second.first?.end()
+            u.second.second.forEach {
+                removeView(it)
+            }
+        }
+        mapViewAnimation.clear()
+    }
+
+    @SuppressLint("Recycle")
+    private fun addViewAndAnimation(index: Int, pointF: PointF) {
+        val rippleParams = LayoutParams(
+            SIZE_CIRCLE,
+            SIZE_CIRCLE
+        )
+
+        rippleParams.leftMargin = pointF.x.toInt() - SIZE_CIRCLE / 2
+        rippleParams.topMargin = pointF.y.toInt() - SIZE_CIRCLE / 2
+
+        val animatorSet = AnimatorSet()
+        animatorSet.interpolator = AccelerateDecelerateInterpolator()
+        val animatorList = ArrayList<Animator>()
+        val rippleViewList: MutableList<RippleView> = arrayListOf()
+
+        for (i in 0 until rippleAmount) {
+            val rippleView = RippleView(context)
+            mapColor[index]?.let { rippleView.setColor(it) }
+            addView(rippleView, rippleParams)
+            rippleViewList.add(rippleView)
+
+            val scaleXAnimator = ObjectAnimator.ofFloat(rippleView, "ScaleX", 1.0f, rippleScale)
+            scaleXAnimator.repeatCount = ObjectAnimator.INFINITE
+            scaleXAnimator.repeatMode = ObjectAnimator.RESTART
+            scaleXAnimator.startDelay = (i * rippleDelay).toLong()
+            scaleXAnimator.setDuration(rippleDurationTime.toLong())
+            animatorList.add(scaleXAnimator)
+
+            val scaleYAnimator = ObjectAnimator.ofFloat(rippleView, "ScaleY", 1.0f, rippleScale)
+            scaleYAnimator.repeatCount = ObjectAnimator.INFINITE
+            scaleYAnimator.repeatMode = ObjectAnimator.RESTART
+            scaleYAnimator.startDelay = (i * rippleDelay).toLong()
+            scaleYAnimator.setDuration(rippleDurationTime.toLong())
+            animatorList.add(scaleYAnimator)
+
+            val alphaAnimator = ObjectAnimator.ofFloat(rippleView, "Alpha", 1.0f, 0f)
+            alphaAnimator.repeatCount = ObjectAnimator.INFINITE
+            alphaAnimator.repeatMode = ObjectAnimator.RESTART
+            alphaAnimator.startDelay = (i * rippleDelay).toLong()
+            alphaAnimator.setDuration(rippleDurationTime.toLong())
+            animatorList.add(alphaAnimator)
+        }
+
+        animatorSet.playTogether(animatorList)
+        rippleViewList.forEach {
+            it.visibility = View.VISIBLE
+        }
+        animatorSet.start()
+        mapViewAnimation[index] = Pair(pointF, Pair(animatorSet, rippleViewList))
     }
 
     private fun setActionDown(event: MotionEvent) {
         val index = event.actionIndex
         val id = event.getPointerId(index)
 
-        val finger = fingers[id]
-        if (finger == null) {
-            fingers[id] = Pair(
-                Pair(PointF(event.getX(index), event.getY(index)),
-                    Color.rgb(
-                        randomColor.nextInt(256),
-                        randomColor.nextInt(256),
-                        randomColor.nextInt(256)
-                    )),
-                RippleView(ctx)
+        if (!mapViewAnimation.contains(id)) {
+            mapColor[id] = Color.rgb(
+                randomColor.nextInt(256),
+                randomColor.nextInt(256),
+                randomColor.nextInt(256)
             )
+            addViewAndAnimation(id, PointF(event.getX(index), event.getY(index)))
         }
         when (type) {
             SPIN_TYPE.CHOOSE, SPIN_TYPE.COUPLE -> {
-                if (fingers.size == sizeWinner + 1) {
+                if (mapViewAnimation.size == sizeWinner + 1) {
                     startTime = System.currentTimeMillis()
                 }
             }
 
             SPIN_TYPE.RANK -> {
-                if (fingers.size == 2) {
+                if (mapViewAnimation.size == 2) {
                     startTime = System.currentTimeMillis()
                 }
             }
@@ -229,18 +302,20 @@ class SpinView constructor(
     }
 
     private fun setActionUp(event: MotionEvent) {
-        val index = event.actionIndex
-        val id = event.getPointerId(index)
-        val finger = fingers[id]
-        if (finger != null) {
-            if (isEnd) {
-                postDelayed({
-                    resetData()
-                    invalidate()
-                }, 500)
-            } else {
-                finger.second.removeSelf()
-                fingers.remove(id)
+        if (isEnd) {
+            postDelayed({
+                resetData()
+                invalidate()
+            }, 1000)
+        } else {
+            val index = event.actionIndex
+            val id = event.getPointerId(index)
+            if (mapViewAnimation.contains(id)) {
+                val data = mapViewAnimation[id]!!.second
+                data.first?.end()
+                data.second.forEach {
+                    removeView(it)
+                }
             }
         }
     }
@@ -248,18 +323,8 @@ class SpinView constructor(
     private fun setActionMove(event: MotionEvent) {
         val count = event.pointerCount
         for (index in 0 until count) {
-            var finger = fingers[event.getPointerId(index)]
-            finger =
-                Pair(
-                    Pair(PointF(event.getX(index), event.getY(index)),
-                        Color.rgb(
-                            randomColor.nextInt(256),
-                            randomColor.nextInt(256),
-                            randomColor.nextInt(256)
-                        )),
-                    RippleView(ctx)
-                )
-            fingers[event.getPointerId(index)] = finger
+            val id = event.getPointerId(index)
+            checkPointToRemoveView(PointF(event.getX(index), event.getY(index)), id)
         }
 
         if (startTime != 0L && System.currentTimeMillis() - startTime > 2000) {
@@ -281,8 +346,30 @@ class SpinView constructor(
         }
     }
 
+    private fun checkPointToRemoveView(point: PointF, index: Int) {
+        if (mapViewAnimation.contains(index)) {
+            val animationData = mapViewAnimation[index]
+            val currentPoint = animationData?.first
+            currentPoint?.let {
+                if (
+                    point.x > it.x + OFF_LIMIT_REMOVE_VIEW ||
+                    point.x < it.x - OFF_LIMIT_REMOVE_VIEW ||
+                    point.y > it.y + OFF_LIMIT_REMOVE_VIEW ||
+                    point.y < it.y - OFF_LIMIT_REMOVE_VIEW
+                ) {
+                    animationData.second.first?.end()
+                    animationData.second.second.forEach { view ->
+                        removeView(view)
+                    }
+                    mapViewAnimation.remove(index)
+                    addViewAndAnimation(index, point)
+                }
+            }
+        }
+    }
+
     private fun typeChoose() {
-        val randomBound = fingers.keys.toHashSet()
+        val randomBound = mapViewAnimation.keys.toHashSet()
         for (i in 0 until sizeWinner) {
             val randomValue = randomBound.random()
             setRandom.add(randomValue)
@@ -291,30 +378,36 @@ class SpinView constructor(
     }
 
     private fun typeRank() {
-        val randomBound = fingers.keys.toHashSet()
-        fingers.forEach { (t, u) ->
+        val randomBound = mapViewAnimation.keys.toHashSet()
+        mapViewAnimation.forEach { (t, u) ->
             val randomValue = randomBound.random()
-//            mapRank[u.first] = randomValue
+            mapRank[u.first] = randomValue
             randomBound.remove(randomValue)
         }
+        Log.d(TAG, "typeRank: ${mapRank.size}")
     }
 
     private fun typeCouple() {
-        fingers.forEach { k, v ->
+        mapViewAnimation.forEach { (k, v) ->
             val valueRandom = ThreadLocalRandom.current().nextInt(sizeCouple)
+            mapColor[valueRandom] = Color.rgb(
+                randomColor.nextInt(256),
+                randomColor.nextInt(256),
+                randomColor.nextInt(256)
+            )
             if (mapCouple.contains(valueRandom)) {
                 val currentList = mapCouple[valueRandom]?.toMutableList() ?: arrayListOf()
-//                currentList.add(v.first)
+                currentList.add(v.first)
                 mapCouple[valueRandom] = currentList
             } else {
                 val newList = arrayListOf<PointF>()
-//                newList.add(v.first)
+                newList.add(v.first)
                 mapCouple[valueRandom] = newList
             }
         }
     }
 
-    fun setType(type: SPIN_TYPE){
+    fun setType(type: SPIN_TYPE) {
         this@SpinView.type = type
     }
 }

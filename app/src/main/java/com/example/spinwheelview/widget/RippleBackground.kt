@@ -3,8 +3,10 @@ package com.example.spinwheelview.widget
 import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Canvas
+import android.graphics.Color
 import android.graphics.Paint
 import android.util.AttributeSet
 import android.util.Log
@@ -12,11 +14,12 @@ import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.RelativeLayout
 import com.example.spinwheelview.R
+import java.util.Random
 import kotlin.math.min
 
 
 open class RippleBackground : RelativeLayout {
-    protected var rippleColor = 0
+
     protected var rippleStrokeWidth = 0f
     protected var rippleRadius = 0f
     protected var rippleDurationTime = 0
@@ -24,13 +27,10 @@ open class RippleBackground : RelativeLayout {
     protected var rippleDelay = 0
     protected var rippleScale = 0f
     protected var rippleType = 0
-    protected var paint: Paint? = null
-    var isRippleAnimationRunning: Boolean = false
-        private set
-    protected var animatorSet: AnimatorSet? = null
-    protected var animatorList: ArrayList<Animator>? = null
-    protected var rippleParams: LayoutParams? = null
-    protected val rippleViewList = ArrayList<RippleView>()
+    protected var paint: Paint = Paint()
+
+    protected var mapColor: HashMap<Int, Int> = hashMapOf()
+    protected var randomColor: Random = Random()
 
     constructor(context: Context?) : super(context)
 
@@ -46,16 +46,14 @@ open class RippleBackground : RelativeLayout {
         init(context, attrs)
     }
 
+    @SuppressLint("ResourceType")
     private fun init(context: Context, attrs: AttributeSet?) {
         if (isInEditMode) return
 
         requireNotNull(attrs) { "Attributes should be provided to this view," }
 
         val typedArray = context.obtainStyledAttributes(attrs, R.styleable.RippleBackground)
-        rippleColor = typedArray.getColor(
-            R.styleable.RippleBackground_rb_color,
-            resources.getColor(R.color.rippelColor)
-        )
+
         rippleStrokeWidth = typedArray.getDimension(
             R.styleable.RippleBackground_rb_strokeWidth,
             resources.getDimension(R.dimen.rippleStrokeWidth)
@@ -75,22 +73,13 @@ open class RippleBackground : RelativeLayout {
         rippleDelay = rippleDurationTime / rippleAmount
 
         paint = Paint()
-        paint!!.isAntiAlias = true
+        paint.isAntiAlias = true
+
         if (rippleType == DEFAULT_FILL_TYPE) {
             rippleStrokeWidth = 0f
-            paint!!.style = Paint.Style.FILL
-        } else paint!!.style = Paint.Style.STROKE
-        paint!!.color = rippleColor
-
-
+            paint.style = Paint.Style.FILL
+        } else paint.style = Paint.Style.STROKE
     }
-
-    override fun dispatchDraw(canvas: Canvas) {
-        super.dispatchDraw(canvas)
-
-    }
-
-
 
     inner class RippleView(context: Context?) : View(context) {
         init {
@@ -100,35 +89,25 @@ open class RippleBackground : RelativeLayout {
         override fun onDraw(canvas: Canvas) {
             val radius =
                 (min(width.toDouble(), height.toDouble()) / 2).toInt()
-            Log.d("TAG", "onDraw: $radius")
             canvas.drawCircle(
                 radius.toFloat(), radius.toFloat(), radius - rippleStrokeWidth,
-                paint!!
+                paint
             )
         }
-    }
 
-    fun startRippleAnimation() {
-        if (!isRippleAnimationRunning) {
-            for (rippleView in rippleViewList) {
-                rippleView.visibility = VISIBLE
-            }
-            animatorSet!!.start()
-            isRippleAnimationRunning = true
-        }
-    }
-
-    fun stopRippleAnimation() {
-        if (isRippleAnimationRunning) {
-            animatorSet!!.end()
-            isRippleAnimationRunning = false
+        fun setColor(color: Int){
+            Log.d("TAG", "setColor: $color")
+            paint.color = color
+            invalidate()
         }
     }
 
     companion object {
-        private const val DEFAULT_RIPPLE_COUNT = 6
-        private const val DEFAULT_DURATION_TIME = 3000
+        const val DEFAULT_RIPPLE_COUNT = 6
+        private const val DEFAULT_DURATION_TIME = 2000
         private const val DEFAULT_SCALE = 6.0f
         private const val DEFAULT_FILL_TYPE = 0
+        const val SIZE_CIRCLE = 60
+        const val OFF_LIMIT_REMOVE_VIEW = 10
     }
 }
