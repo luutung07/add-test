@@ -56,16 +56,14 @@ class SpinView constructor(
     private var mapRank = hashMapOf<PointF, Int>()
 
     // couple
-    private var sizeCouple = 2
+    private var sizeCouple = 3
     private var mapCouple = hashMapOf<Int, Pair<List<PointF>, Int>>()
     private var mapMergeCoupleView = hashMapOf<Int, List<Int>>()
 
     private var startTime = 0L
     private var isEnd = false
 
-    private var mapViewAnimation: HashMap<Int, Pair<PointF, Pair<AnimatorSet?, List<RippleView>>>> =
-        hashMapOf()
-
+    private var mapViewAnimation: HashMap<Int, Pair<PointF, Pair<AnimatorSet?, List<RippleView>>>> = hashMapOf()
 
     init {
 
@@ -154,14 +152,13 @@ class SpinView constructor(
             }
 
             mapMergeCoupleView.forEach { t, u ->
-                Log.d(TAG, "checkColor merge: [k = $t] -- [v = ${u.toList()}]")
+               u.forEach {
+                   if (mapViewAnimation.contains(it) && mapCouple.contains(t)){
+                       mapViewAnimation[it]?.second?.second?.setColor(mapCouple[t]!!.second)
+                   }
+               }
             }
 
-            if (mapViewAnimation.size == 3){
-                mapViewAnimation[0]?.second?.second?.setColor(Color.RED)
-                mapViewAnimation[1]?.second?.second?.setColor(Color.BLACK)
-                mapViewAnimation[2]?.second?.second?.setColor(Color.RED)
-            }
             mapCouple.forEach { (t, u) ->
                 val path = Path()
                 path.moveTo(u.first[0].x, u.first[0].y)
@@ -319,7 +316,7 @@ class SpinView constructor(
     private fun setActionUp(event: MotionEvent) {
         if (isEnd) {
             postDelayed({
-//                resetData()
+                resetData()
                 invalidate()
             }, 1000)
         } else {
@@ -331,6 +328,7 @@ class SpinView constructor(
                 data.second.forEach {
                     removeView(it)
                 }
+                mapViewAnimation.remove(id)
             }
         }
     }

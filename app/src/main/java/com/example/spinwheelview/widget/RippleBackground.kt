@@ -27,7 +27,6 @@ open class RippleBackground : RelativeLayout {
     protected var rippleDelay = 0
     protected var rippleScale = 0f
     private var rippleType = 0
-    protected var paint: Paint = Paint()
 
     protected var mapColor: HashMap<Int, Int> = hashMapOf()
     protected var randomColor: Random = Random()
@@ -72,18 +71,20 @@ open class RippleBackground : RelativeLayout {
 
         rippleDelay = rippleDurationTime / rippleAmount
 
-        paint = Paint()
-        paint.isAntiAlias = true
 
-        if (rippleType == DEFAULT_FILL_TYPE) {
-            rippleStrokeWidth = 0f
-            paint.style = Paint.Style.FILL
-        } else paint.style = Paint.Style.STROKE
     }
 
     inner class RippleView(context: Context?) : View(context) {
+        protected var paint: Paint = Paint()
+
         init {
             this.visibility = INVISIBLE
+            paint.isAntiAlias = true
+
+            if (rippleType == DEFAULT_FILL_TYPE) {
+                rippleStrokeWidth = 0f
+                paint.style = Paint.Style.FILL
+            } else paint.style = Paint.Style.STROKE
         }
 
         override fun onDraw(canvas: Canvas) {
