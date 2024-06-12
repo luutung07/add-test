@@ -11,4 +11,6 @@
     <color name="button_border_default_color">#424d59</color>
     <color name="button_text_selected_color">#f5c94c</color>
     <color name="button_text_default_color">#7a8aa1</color>
+
+    <color name="rippelColor">#0099CC</color>
 </resources>
