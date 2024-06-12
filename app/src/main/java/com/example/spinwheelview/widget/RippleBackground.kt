@@ -98,8 +98,10 @@ open class RippleBackground : RelativeLayout {
         fun setColor(color: Int){
             Log.d("TAG", "setColor: $color")
             paint.color = color
-            invalidate()
+            postInvalidate()
         }
+
+        fun getColor() = paint.color
     }
 
     companion object {

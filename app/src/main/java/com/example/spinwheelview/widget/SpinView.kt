@@ -142,19 +142,33 @@ class SpinView constructor(
         }
 
         if (isEnd && type == SPIN_TYPE.COUPLE) {
+            Log.d(TAG, "dispatchDraw: checkasjdbnjasdbnjasbdasdadasdasd")
+            mapCouple.forEach {
+                Log.d(TAG, "dataCouple ======================================== ${it.key}")
+                it.value.forEach {
+                    Log.d(TAG, "dataCouple = [${it.x} - ${it.y}]")
+                }
+            }
+
+            mapViewAnimation.forEach { t, u ->
+                Log.d(TAG, "dataAnimatiom ========================= ${t}")
+                Log.d(TAG, "dataAnimatiom: [${u.first.x} - ${u.first.y}]")
+            }
+
             mapCouple.forEach { (t, u) ->
                 val sameColor = mapColor[t] ?: Color.RED
 
-                mapViewAnimation.forEach { (k, v) ->
-                    v.second.second.map { view ->
-                        if (u.contains(v.first)) {
-                            view.setColor(sameColor)
-                        } else {
-                            view.setColor(mapColor[k] ?: Color.BLACK)
-                        }
-                        view
-                    }
-                }
+//                mapViewAnimation.forEach { (k, v) ->
+//                    v.second.second.forEach { view ->
+//                        if (u.contains(v.first)) {
+//                            view.setColor(sameColor)
+//                            Log.d(TAG, "checkTrung ${u.find { it == v.first }} k = $k")
+//                        } else {
+//                            Log.d(TAG, "checkTrung KOKO: $k")
+//                            view.setColor(mapColor[k] ?: Color.BLUE)
+//                        }
+//                    }
+//                }
 
                 val path = Path()
                 path.moveTo(u[0].x, u[0].y)
@@ -165,6 +179,13 @@ class SpinView constructor(
 
                 path.close()
                 canvas.drawPath(path, paintLine.apply { color = sameColor })
+            }
+
+            mapViewAnimation.forEach { t, u ->
+                Log.d(TAG, "getColor: ========================================")
+                u.second.second.forEach {
+                    Log.d(TAG, "getColor = ${it.getColor()}")
+                }
             }
         }
     }
@@ -184,14 +205,15 @@ class SpinView constructor(
             }
 
             MotionEvent.ACTION_MOVE -> {
-                Log.d(TAG, "onTouchEvent: ACTION_MOVE")
                 if (isEnd) {
-                    postDelayed({
-                        resetData()
-                    }, 1000)
+//                    postDelayed({
+//                        resetData()
+//                    }, 1000)
+                    return false
                 } else {
                     setActionMove(event)
                 }
+                Log.d(TAG, "onTouchEvent: ACTION_MOVE")
             }
 
             MotionEvent.ACTION_CANCEL -> {
@@ -390,11 +412,6 @@ class SpinView constructor(
     private fun typeCouple() {
         mapViewAnimation.forEach { (k, v) ->
             val valueRandom = ThreadLocalRandom.current().nextInt(sizeCouple)
-            mapColor[valueRandom] = Color.rgb(
-                randomColor.nextInt(256),
-                randomColor.nextInt(256),
-                randomColor.nextInt(256)
-            )
             if (mapCouple.contains(valueRandom)) {
                 val currentList = mapCouple[valueRandom]?.toMutableList() ?: arrayListOf()
                 currentList.add(v.first)
