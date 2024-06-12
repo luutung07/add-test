@@ -21,12 +21,12 @@ import kotlin.math.min
 open class RippleBackground : RelativeLayout {
 
     protected var rippleStrokeWidth = 0f
-    protected var rippleRadius = 0f
+    private var rippleRadius = 0f
     protected var rippleDurationTime = 0
     protected var rippleAmount = 0
     protected var rippleDelay = 0
     protected var rippleScale = 0f
-    protected var rippleType = 0
+    private var rippleType = 0
     protected var paint: Paint = Paint()
 
     protected var mapColor: HashMap<Int, Int> = hashMapOf()
@@ -95,10 +95,15 @@ open class RippleBackground : RelativeLayout {
             )
         }
 
-        fun setColor(color: Int){
+        @SuppressLint("ResourceAsColor")
+        fun setColor(color: Int?) {
             Log.d("TAG", "setColor: $color")
-            paint.color = color
-            postInvalidate()
+            if (color == null) {
+                paint.setColor(android.R.color.transparent)
+            } else {
+                paint.setColor(color)
+            }
+            invalidate()
         }
 
         fun getColor() = paint.color
@@ -111,5 +116,25 @@ open class RippleBackground : RelativeLayout {
         private const val DEFAULT_FILL_TYPE = 0
         const val SIZE_CIRCLE = 60
         const val OFF_LIMIT_REMOVE_VIEW = 10
+    }
+}
+
+fun List<RippleBackground.RippleView>.getValueColor(): Int {
+    var color = 0
+    this.forEach {
+        color = it.getColor()
+    }
+    return color
+}
+
+fun List<RippleBackground.RippleView>.setColor(color: Int) {
+    this.forEach {
+        it.setColor(color)
+    }
+}
+
+fun List<RippleBackground.RippleView>.resetColor() {
+    this.forEach {
+        it.setColor(null)
     }
 }

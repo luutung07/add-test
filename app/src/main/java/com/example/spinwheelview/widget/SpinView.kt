@@ -11,6 +11,8 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
+import android.os.Handler
+import android.os.Looper
 import android.util.AttributeSet
 import android.util.Log
 import android.view.MotionEvent
@@ -55,13 +57,15 @@ class SpinView constructor(
 
     // couple
     private var sizeCouple = 2
-    private var mapCouple = hashMapOf<Int, List<PointF>>()
+    private var mapCouple = hashMapOf<Int, Pair<List<PointF>, Int>>()
+    private var mapMergeCoupleView = hashMapOf<Int, List<Int>>()
 
     private var startTime = 0L
     private var isEnd = false
 
     private var mapViewAnimation: HashMap<Int, Pair<PointF, Pair<AnimatorSet?, List<RippleView>>>> =
         hashMapOf()
+
 
     init {
 
@@ -142,50 +146,32 @@ class SpinView constructor(
         }
 
         if (isEnd && type == SPIN_TYPE.COUPLE) {
-            Log.d(TAG, "dispatchDraw: checkasjdbnjasdbnjasbdasdadasdasd")
-            mapCouple.forEach {
-                Log.d(TAG, "dataCouple ======================================== ${it.key}")
-                it.value.forEach {
-                    Log.d(TAG, "dataCouple = [${it.x} - ${it.y}]")
-                }
+            mapCouple.forEach { t, u ->
+                Log.d(TAG, "checkColor -- [key = ${t}]")
+            }
+            mapViewAnimation.forEach { k, v ->
+                Log.d(TAG, "checkColor view = [key = ${k}] [v = ${v.second.second.toString()}]")
             }
 
-            mapViewAnimation.forEach { t, u ->
-                Log.d(TAG, "dataAnimatiom ========================= ${t}")
-                Log.d(TAG, "dataAnimatiom: [${u.first.x} - ${u.first.y}]")
+            mapMergeCoupleView.forEach { t, u ->
+                Log.d(TAG, "checkColor merge: [k = $t] -- [v = ${u.toList()}]")
             }
 
+            if (mapViewAnimation.size == 3){
+                mapViewAnimation[0]?.second?.second?.setColor(Color.RED)
+                mapViewAnimation[1]?.second?.second?.setColor(Color.BLACK)
+                mapViewAnimation[2]?.second?.second?.setColor(Color.RED)
+            }
             mapCouple.forEach { (t, u) ->
-                val sameColor = mapColor[t] ?: Color.RED
-
-//                mapViewAnimation.forEach { (k, v) ->
-//                    v.second.second.forEach { view ->
-//                        if (u.contains(v.first)) {
-//                            view.setColor(sameColor)
-//                            Log.d(TAG, "checkTrung ${u.find { it == v.first }} k = $k")
-//                        } else {
-//                            Log.d(TAG, "checkTrung KOKO: $k")
-//                            view.setColor(mapColor[k] ?: Color.BLUE)
-//                        }
-//                    }
-//                }
-
                 val path = Path()
-                path.moveTo(u[0].x, u[0].y)
+                path.moveTo(u.first[0].x, u.first[0].y)
 
-                for (i in 1 until u.size) {
-                    path.lineTo(u[i].x, u[i].y)
+                for (i in 1 until u.first.size) {
+                    path.lineTo(u.first[i].x, u.first[i].y)
                 }
 
                 path.close()
-                canvas.drawPath(path, paintLine.apply { color = sameColor })
-            }
-
-            mapViewAnimation.forEach { t, u ->
-                Log.d(TAG, "getColor: ========================================")
-                u.second.second.forEach {
-                    Log.d(TAG, "getColor = ${it.getColor()}")
-                }
+                canvas.drawPath(path, paintLine.apply { color = u.second })
             }
         }
     }
@@ -226,12 +212,19 @@ class SpinView constructor(
     }
 
     private fun resetData() {
+
         isEnd = false
         startTime = 0
+
         mapRank.clear()
+
         setRandom.clear()
+
         mapCouple.clear()
+        mapMergeCoupleView.clear()
+
         mapColor.clear()
+
         mapViewAnimation.forEach { (t, u) ->
             u.second.first?.end()
             u.second.second.forEach {
@@ -255,7 +248,7 @@ class SpinView constructor(
         animatorSet.interpolator = AccelerateDecelerateInterpolator()
         val animatorList = ArrayList<Animator>()
         val rippleViewList: MutableList<RippleView> = arrayListOf()
-
+        Log.d(TAG, "tunglv addViewAndAnimation: $index ${mapColor.get(index)}")
         for (i in 0 until rippleAmount) {
             val rippleView = RippleView(context)
             mapColor[index]?.let { rippleView.setColor(it) }
@@ -326,7 +319,7 @@ class SpinView constructor(
     private fun setActionUp(event: MotionEvent) {
         if (isEnd) {
             postDelayed({
-                resetData()
+//                resetData()
                 invalidate()
             }, 1000)
         } else {
@@ -413,13 +406,19 @@ class SpinView constructor(
         mapViewAnimation.forEach { (k, v) ->
             val valueRandom = ThreadLocalRandom.current().nextInt(sizeCouple)
             if (mapCouple.contains(valueRandom)) {
-                val currentList = mapCouple[valueRandom]?.toMutableList() ?: arrayListOf()
+                val data = mapCouple[valueRandom]!!
+                val currentList = data.first.toMutableList()
                 currentList.add(v.first)
-                mapCouple[valueRandom] = currentList
+                mapCouple[valueRandom] = Pair(currentList, data.second)
+
+                val currentListKey = mapMergeCoupleView[valueRandom]!!.toMutableList()
+                currentListKey.add(k)
+                mapMergeCoupleView[valueRandom] = currentListKey
             } else {
                 val newList = arrayListOf<PointF>()
                 newList.add(v.first)
-                mapCouple[valueRandom] = newList
+                mapCouple[valueRandom] = Pair(newList, mapColor[k] ?: Color.RED)
+                mapMergeCoupleView[valueRandom] = listOf(k)
             }
         }
     }
